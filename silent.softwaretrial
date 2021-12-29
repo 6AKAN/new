@@ -83,13 +83,6 @@ do
     Main:AddDropdown("targetpart", {Text = "target part", Default = 1, Values = {
         "head", "humanoidrootpart"
     }})
-    Main:AddDropdown("Method", {Text = "silent aim method", Default = 1, Values = {
-        "Raycast","FindPartOnRay",
-        "FindPartOnRayWithWhitelist",
-        "FindPartOnRayWithIgnoreList",
-        "Mouse.Hit/Target"
-    }})
-end
 local FieldOfViewBOX = GeneralTab:AddLeftTabbox("field of view")
 do
     local fov_circle = Drawing.new("circle")
@@ -105,7 +98,7 @@ do
     local Main = FieldOfViewBOX:AddTab("field of view")
     Main:AddToggle("fov_Enabled", {Text = "enabled"})
     Main:AddSlider("Radius", {Text = "radius", Min = 0, Max = 360, Default = 180, Rounding = 0}):OnChanged(function()
-        fov_circle.Radius = Options.Radius.Value
+        fov_circle.Radius = Options.radius.Value
     end)
     Main:AddToggle("Visible", {Text = "visible"}):AddColorPicker("color", {Default = Color3.fromRGB(54, 57, 241)}):OnChanged(function()
         fov_circle.Visible = Toggles.Visible.Value
@@ -117,107 +110,3 @@ do
         end
     end)
 end
-
-
-local ExpectedArguments = {
-    FindPartOnRayWithIgnoreList = {
-        ArgCountRequired = 3,
-        Args = {
-            "Instance", "Ray", "table", "boolean", "boolean"
-        }
-    },
-    FindPartOnRayWithWhitelist = {
-        ArgCountRequired = 3,
-        Args = {
-            "Instance", "Ray", "table", "boolean"
-        }
-    },
-    FindPartOnRay = {
-        ArgCountRequired = 2,
-        Args = {
-            "Instance", "Ray", "Instance", "boolean", "boolean"
-        }
-    },
-    Raycast = {
-        ArgCountRequired = 3,
-        Args = {
-            "Instance", "Vector3", "Vector3", "RaycastParams"
-        }
-    }
-}
-
-
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(...)
-    local Method = getnamecallmethod()
-    local Arguments = {...}
-    local self = Arguments[1]
-
-    if Toggles.aim_Enabled.Value and self == workspace then
-        if Method == "FindPartOnRayWithIgnoreList" and Options.Method.Value == Method then
-            if ValidateArguments(Arguments, ExpectedArguments.FindPartOnRayWithIgnoreList) then
-                local A_Ray = Arguments[2]
-
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    local Origin = A_Ray.Origin
-                    local Direction = getDirection(Origin, HitPart.Position)
-                    Arguments[2] = Ray.new(Origin, Direction)
-
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        elseif Method == "FindPartOnRayWithWhitelist" and Options.Method.Value == Method then
-            if ValidateArguments(Arguments, ExpectedArguments.FindPartOnRayWithWhitelist) then
-                local A_Ray = Arguments[2]
-
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    local Origin = A_Ray.Origin
-                    local Direction = getDirection(Origin, HitPart.Position)
-                    Arguments[2] = Ray.new(Origin, Direction)
-
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        elseif (Method == "FindPartOnRay" or Method == "findPartOnRay") and Options.Method.Value:lower() == Method:lower() then
-            if ValidateArguments(Arguments, ExpectedArguments.FindPartOnRay) then
-                local A_Ray = Arguments[2]
-
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    local Origin = A_Ray.Origin
-                    local Direction = getDirection(Origin, HitPart.Position)
-                    Arguments[2] = Ray.new(Origin, Direction)
-
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        elseif Method == "Raycast" and Options.Method.Value == Method then
-            if ValidateArguments(Arguments, ExpectedArguments.Raycast) then
-                local A_Origin = Arguments[2]
-
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    Arguments[3] = getDirection(A_Origin, HitPart.Position)
-
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        end
-    end
-    return oldNamecall(...)
-end)
-
-local oldIndex = nil 
-oldIndex = hookmetamethod(game, "__index", function(self, Index)
-    if self == Mouse and (Index == "Hit" or Index == "Target") then 
-        if Toggles.aim_Enabled.Value == true and Options.Method.Value == "Mouse.Hit/Target" and getClosestPlayer() then
-            local HitPart = getClosestPlayer()
-
-            return ((Index == "Hit" and HitPart.CFrame) or (Index == "Target" and HitPart))
-        end
-    end
-
-    return oldIndex(self, Index)
-end)
